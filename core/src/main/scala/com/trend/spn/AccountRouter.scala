@@ -14,23 +14,23 @@ case object AckCommand extends RouterCommand
 case object CompleteCommand extends RouterCommand
 
 object AccountRouter {
-    def props(): Props = Props(new AccountRouter())
+  def props(): Props = Props(new AccountRouter())
 }
 
 class AccountRouter extends Actor {
-    var router: Router = _
+  var router: Router = _
 
-//    router = {
-//        val routees = Vector.fill(props.streamParallelism) {
-//            val r = context.actorOf(Props(classOf[InterceptorActor], props))
-//            context watch r
-//            ActorRefRoutee(r)
-//        }
-//        Router(RoundRobinRoutingLogic(), routees)
-//    }
-    override def receive: Receive = {
-        case InitCommand => sender() ! AckCommand
-        case CompleteCommand => println("Complete!!")
-        case _ => println("Do nothing")
-    }
+  //    router = {
+  //        val routees = Vector.fill(props.streamParallelism) {
+  //            val r = context.actorOf(Props(classOf[InterceptorActor], props))
+  //            context watch r
+  //            ActorRefRoutee(r)
+  //        }
+  //        Router(RoundRobinRoutingLogic(), routees)
+  //    }
+  override def receive: Receive = {
+    case InitCommand => sender() ! AckCommand
+    case CompleteCommand => println("Complete!!")
+    case _ => println("Do nothing")
+  }
 }

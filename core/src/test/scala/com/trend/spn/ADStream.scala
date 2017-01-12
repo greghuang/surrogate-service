@@ -99,6 +99,7 @@ object ADStream extends App {
                 .withWakeupTimeout(10.seconds)
                 .withMaxWakeups(10)
 
+
         val source = Consumer.committableSource(setting, Subscriptions.topics(topic1)).
                 filterNot(_.record.value == InitialMsg).
                 mapAsync(1) { msg =>
