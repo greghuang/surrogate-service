@@ -5,7 +5,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 /**
  * Created by GregHuang on 1/13/17.
  */
-class IntegrationSpec(props: Config) extends FileSourceKafkaSpec(props) {
+class IntegrationSpec(props: Config) extends KafkaFileSource(props) {
     def this() = this(
         ConfigFactory.parseString( """
           akka.kafka.consumer{

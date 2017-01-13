@@ -30,7 +30,7 @@ object ADReactiveStreamSpec {
         """
 }
 
-class ADReactiveStreamSpec(props: Config) extends FileSourceKafkaSpec(props) {
+class ADReactiveStreamSpec(props: Config) extends KafkaFileSource(props) {
     def this() = this(ConfigFactory.parseString(ADReactiveStreamSpec.config).withFallback(ConfigFactory.load()))
 
     class Aggregator extends Actor {
