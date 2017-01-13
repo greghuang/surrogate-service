@@ -5,6 +5,7 @@ import akka.stream.{KillSwitches, ClosedShape}
 import akka.util.Timeout
 import akka.{NotUsed, Done}
 import akka.kafka.scaladsl.Consumer
+import com.trend.spn.router.Message
 
 import scala.language.postfixOps
 import scala.concurrent.duration._
@@ -56,8 +57,12 @@ class ADReactiveStream(system: ActorSystem, props: Config) {
                 .viaMat(committableMsgToString)(Keep.left)
     }
 
-    def flowAccountMatrix(accountMatrix: ActorRef)(implicit timeout: Timeout): Flow[String, Int, NotUsed] = {
-        Flow[String].mapAsync(5)(elem => (accountMatrix ? elem).mapTo[Int])
+//    def flowAccountMatrix(accountMatrix: ActorRef)(implicit timeout: Timeout): Flow[String, Int, NotUsed] = {
+//        Flow[String].mapAsync(5)(elem => (accountMatrix ? elem).mapTo[Int])
+//    }
+
+    def flowAccountMatrix(accountMatrix: ActorRef)(implicit timeout: Timeout): Flow[(Int, String), Int, NotUsed] = {
+        Flow[(Int, String)].mapAsync(5)(elem => (accountMatrix ? Message(elem._1.toString, elem._2)).mapTo[Int])
     }
 
     def accountMatrixGraph(accountMatrix: ActorRef, topic: String, partition: Int)(implicit timeout: Timeout) = {
@@ -67,7 +72,14 @@ class ADReactiveStream(system: ActorSystem, props: Config) {
 
         RunnableGraph.fromGraph(GraphDSL.create(source, flow, kill)((_, _, _)) { implicit builder => (source, flow, kill) =>
             import GraphDSL.Implicits._
-            source ~> flow ~> kill ~> Sink.ignore
+            //Add an integer(1 ~ 3) as temporary key
+            def aKey = Source.fromIterator(() => Iterator.from(1))
+            val zip = builder.add(Zip[Int, String]())
+
+            aKey.map(_ % 3) ~> zip.in0
+            source ~> zip.in1
+            zip.out ~> flow ~> kill ~> Sink.ignore
+            //source ~> flow ~> kill ~> Sink.ignore
             ClosedShape
         })
     }

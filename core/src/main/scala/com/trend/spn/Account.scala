@@ -2,6 +2,7 @@ package com.trend.spn
 
 import akka.actor.Props
 import akka.persistence._
+import com.typesafe.config.Config
 
 import scala.collection.mutable.Map
 import scala.collection.mutable.HashMap
@@ -54,12 +55,12 @@ class Stat {
 }
 
 object Account {
-  def props(name: String): Props = Props(new Account(name))
+  def props(config: Config): Props = Props(new Account(config))
 }
 
-class Account(name: String) extends PersistentActor {
+class Account(config: Config) extends PersistentActor {
   import context._
-  val accountName = name
+  //val accountName = name
   var stat = new Stat
   var events = new ListBuffer[WinEvt]()
   var lastSnapshot: SnapshotMetadata = _
@@ -83,5 +84,5 @@ class Account(name: String) extends PersistentActor {
     case _ => akka.actor.Status.Failure(new RuntimeException("Unknown command"))
   }
 
-  override def persistenceId: String = s"$name"
+  override def persistenceId: String = "Test01"
 }
