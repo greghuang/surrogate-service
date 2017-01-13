@@ -16,7 +16,7 @@ case object AckCommand extends RouterCommand
 case object CompleteCommand extends RouterCommand
 
 /*
-    To ensure the message sent to the same actor by the key
+    To ensure the message sent to the same actor based on the same key
  */
 final case class Message(key: String, log: String) extends ConsistentHashable {
     override def consistentHashKey: Any = key

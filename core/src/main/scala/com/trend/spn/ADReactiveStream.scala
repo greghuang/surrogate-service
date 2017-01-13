@@ -65,9 +65,9 @@ class ADReactiveStream(system: ActorSystem, props: Config) {
         Flow[(Int, String)].mapAsync(5)(elem => (accountMatrix ? Message(elem._1.toString, elem._2)).mapTo[Int])
     }
 
-    def accountMatrixGraph(accountMatrix: ActorRef, topic: String, partition: Int)(implicit timeout: Timeout) = {
+    def accountMatrixGraph(accountActor: ActorRef, topic: String, partition: Int)(implicit timeout: Timeout) = {
         val source = getKafkaConsumer(topic, partition)
-        val flow = flowAccountMatrix(accountMatrix)
+        val flow = flowAccountMatrix(accountActor)
         val kill = KillSwitches.single[Int]
 
         RunnableGraph.fromGraph(GraphDSL.create(source, flow, kill)((_, _, _)) { implicit builder => (source, flow, kill) =>

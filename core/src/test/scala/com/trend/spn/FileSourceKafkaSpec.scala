@@ -3,21 +3,22 @@ package com.trend.spn
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
-import akka.kafka.{Subscriptions, ConsumerSettings, ProducerSettings}
+import akka.kafka.{ConsumerSettings, ProducerSettings, Subscriptions}
 import akka.stream.testkit.scaladsl.TestSink
 import akka.{Done, NotUsed}
 import akka.kafka.ProducerMessage.Message
 import akka.kafka.scaladsl.{Consumer, Producer}
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Keep, Framing, FileIO}
-import akka.stream.testkit.{TestSubscriber, StreamSpec}
+import akka.stream.scaladsl.{FileIO, Framing, Keep, Sink}
+import akka.stream.testkit.{StreamSpec, TestSubscriber}
 import akka.util.ByteString
 import com.typesafe.config.Config
 import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.TopicPartition
-import org.apache.kafka.common.serialization.{StringDeserializer, ByteArrayDeserializer, StringSerializer, ByteArraySerializer}
+import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer, StringDeserializer, StringSerializer}
+import org.scalatest.BeforeAndAfterEach
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -25,7 +26,7 @@ import scala.concurrent.duration._
 /**
  * Created by GregHuang on 1/13/17.
  */
-abstract class FileSourceKafkaSpec(_props: Config) extends StreamSpec {
+abstract class FileSourceKafkaSpec(_props: Config) extends StreamSpec with BeforeAndAfterEach {
     implicit val mat = ActorMaterializer()(system)
     implicit val ec = system.dispatcher
     implicit val embeddedKafkaConfig = EmbeddedKafkaConfig(9092, 2181)
@@ -41,12 +42,21 @@ abstract class FileSourceKafkaSpec(_props: Config) extends StreamSpec {
     val producerSettings =
         ProducerSettings(system, new ByteArraySerializer, new StringSerializer).withBootstrapServers(bootstrapServers)
 
-    override def atStartup(): Unit = {
+//    override def atStartup(): Unit = {
+//        EmbeddedKafka.start()
+//        createFileProducer(sourcePath)
+//    }
+//
+//    override def beforeTermination(): Unit = {
+//        EmbeddedKafka.stop()
+//    }
+
+    override protected def beforeEach(): Unit = {
         EmbeddedKafka.start()
         createFileProducer(sourcePath)
     }
 
-    override def beforeTermination(): Unit = {
+    override def afterEach(): Unit = {
         EmbeddedKafka.stop()
     }
 
