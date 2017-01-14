@@ -30,7 +30,7 @@ object ADReactiveStreamSpec {
         """
 }
 
-class ADReactiveStreamSpec(props: Config) extends KafkaFileSource(props) {
+class ADReactiveStreamSpec(props: Config) extends KafkaFileSource {
     def this() = this(ConfigFactory.parseString(ADReactiveStreamSpec.config).withFallback(ConfigFactory.load()))
 
     class Aggregator extends Actor {
@@ -54,27 +54,27 @@ class ADReactiveStreamSpec(props: Config) extends KafkaFileSource(props) {
 //    }
 //
     "An ADReactiveStream" must {
-//        "consume the specified topic" in {
-//            implicit val timeout = Timeout(5.seconds)
-//            val adStream = ADReactiveStream(system, props)
-//            val source: Source[String, Consumer.Control] = adStream.getKafkaConsumer(topic, partition)
-//            val (control, probe) = source.toMat(TestSink.probe)(Keep.both).run
-//
-//            probe.request(100).expectNextN(100)
-//            probe.cancel
-//            Await.result(control.shutdown(), 5 seconds)
-//        }
-//
-//        "shutdown the consumer gracefully" in {
-//            implicit val timeout = Timeout(5 seconds)
-//            val adStream = ADReactiveStream(system, props)
-//            val g: RunnableGraph[(Consumer.Control, TestSubscriber.Probe[String])] = adStream.getKafkaConsumer(topic, partition).toMat(TestSink.probe)(Keep.both)
-//            val (control, probe) = g.run()
-//            probe.request(100).expectNextN(100)
-//            Await.result(control.shutdown(), 5 seconds)
-//            val isShutdown = Await.result(control.isShutdown, 5 seconds)
-//            assert( isShutdown.isInstanceOf[Done] )
-//        }
+        "consume the specified topic" in {
+            implicit val timeout = Timeout(5.seconds)
+            val adStream = ADReactiveStream(system, props)
+            val source: Source[String, Consumer.Control] = adStream.getKafkaConsumer(topic, partition)
+            val (control, probe) = source.toMat(TestSink.probe)(Keep.both).run
+
+            probe.request(100).expectNextN(100)
+            probe.cancel
+            Await.result(control.shutdown(), 5 seconds)
+        }
+
+        "shutdown the consumer gracefully" in {
+            implicit val timeout = Timeout(5 seconds)
+            val adStream = ADReactiveStream(system, props)
+            val g: RunnableGraph[(Consumer.Control, TestSubscriber.Probe[String])] = adStream.getKafkaConsumer(topic, partition).toMat(TestSink.probe)(Keep.both)
+            val (control, probe) = g.run()
+            probe.request(100).expectNextN(100)
+            Await.result(control.shutdown(), 5 seconds)
+            val isShutdown = Await.result(control.isShutdown, 5 seconds)
+            assert( isShutdown.isInstanceOf[Done] )
+        }
 
         "run the graph with AccountRouter actor" in {
             implicit val timeout = Timeout(5.seconds)

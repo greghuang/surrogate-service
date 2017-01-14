@@ -1,21 +1,116 @@
 package com.trend.spn
 
+import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
+
+import akka.actor.Props
+import akka.persistence.{Eventsourced, Recovery, _}
+import akka.testkit.AkkaSpec
 import com.typesafe.config.{Config, ConfigFactory}
+import org.apache.commons.io.FileUtils
+import org.scalatest.TestData
+import org.scalatest.matchers.{MatchResult, Matcher}
+
+import scala.collection.immutable
+import scala.reflect.ClassTag
+import scala.util.control.NoStackTrace
 
 /**
- * Created by GregHuang on 1/13/17.
- */
-class IntegrationSpec(props: Config) extends KafkaFileSource(props) {
-    def this() = this(
-        ConfigFactory.parseString( """
-          akka.kafka.consumer{
+  * Created by GregHuang on 1/13/17.
+  */
+object IntegrationSpec {
+  def config(plugin: String, test: String, serialization: String = "on", extraConfig: Option[String] = None) =
+    extraConfig.map(ConfigFactory.parseString(_)).getOrElse(ConfigFactory.empty()).withFallback(
+      ConfigFactory.parseString(
+        s"""
+          akka.kafka.consumer {
             kafka-clients.bootstrap.servers = "localhost:9092"
             topic = test01
             sourcePath = /ad_proc_100_test.txt
           }
-                                   """)
-          .withFallback(ConfigFactory.load())
-    )
-
-
+          akka.actor.serialize-creators = ${serialization}
+          akka.actor.serialize-messages = ${serialization}
+          akka.actor.warn-about-java-serializer-usage = off
+          akka.persistence.publish-plugin-commands = on
+          akka.persistence.journal.plugin = "akka.persistence.journal.${plugin}"
+          akka.persistence.journal.leveldb.dir = "target/journal-${test}"
+          akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
+          akka.persistence.snapshot-store.local.dir = "target/snapshots-${test}/"
+          akka.test.single-expect-default = 10s
+      """))
 }
+
+abstract class IntegrationSpec(props: Config) extends KafkaFileSource with Cleanup with PersistenceMatchers {
+  //  def this() = this(
+  //    ConfigFactory.parseString(IntegrationSpec.testConf).withFallback(ConfigFactory.load())
+  //  )
+
+  private var _name: String = _
+
+  lazy val extension = Persistence(system)
+  val counter = new AtomicInteger(0)
+
+  /**
+    * Unique name per test.
+    */
+  def name = _name
+
+  /**
+    * Prefix for generating a unique name per test.
+    */
+  def namePrefix: String = system.name
+
+  /**
+    * Creates a persistent actor with current name as constructor argument.
+    */
+  def namedPersistentActor[T <: NamedPersistentActor : ClassTag] =
+    system.actorOf(Props(implicitly[ClassTag[T]].runtimeClass, name))
+
+  override protected def beforeEach(testData: TestData): Unit = {
+    super.beforeEach(testData)
+    _name = s"${namePrefix}-${counter.incrementAndGet()}"
+  }
+}
+
+trait Cleanup { this: AkkaSpec ⇒
+  val storageLocations = List(
+    "akka.persistence.journal.leveldb.dir",
+    "akka.persistence.journal.leveldb-shared.store.dir",
+    "akka.persistence.snapshot-store.local.dir").map(s ⇒ new File(system.settings.config.getString(s)))
+
+  override protected def atStartup(): Unit = {
+    storageLocations.foreach(FileUtils.deleteDirectory)
+  }
+
+  override protected def afterTermination(): Unit = {
+    storageLocations.foreach(FileUtils.deleteDirectory)
+  }
+}
+
+/** Additional ScalaTest matchers useful in persistence tests */
+trait PersistenceMatchers {
+
+  /** Use this matcher to verify in-order execution of independent "streams" of events */
+  final class IndependentlyOrdered(prefixes: immutable.Seq[String]) extends Matcher[immutable.Seq[Any]] {
+    override def apply(_left: immutable.Seq[Any]) = {
+      val left = _left.map(_.toString)
+      val mapped = left.groupBy(l ⇒ prefixes.indexWhere(l.startsWith(_))) - (-1) // ignore other messages
+      val results = for {
+          (pos, seq) <- mapped
+          nrs = seq.map(_.replaceFirst(prefixes(pos), "").toInt)
+          sortedNrs = nrs.sorted
+          if nrs != sortedNrs
+        } yield MatchResult(
+          false,
+          s"""Messages sequence with prefix ${prefixes(pos)} was not sorted! Was: $seq"""",
+          s"""Messages sequence with prefix ${prefixes(pos)} was sorted! Was: $seq"""")
+
+      if (results.forall(_.matches)) MatchResult(true, "", "")
+      else results.find(r ⇒ !r.matches).get
+    }
+  }
+
+  def beIndependentlyOrdered(prefixes: String*) = new IndependentlyOrdered(prefixes.toList)
+}
+
+

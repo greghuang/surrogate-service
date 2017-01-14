@@ -91,6 +91,7 @@ case object GetState
 
 /** Additional ScalaTest matchers useful in persistence tests */
 trait PersistenceMatchers {
+
     /** Use this matcher to verify in-order execution of independent "streams" of events */
     final class IndependentlyOrdered(prefixes: immutable.Seq[String]) extends Matcher[immutable.Seq[Any]] {
         override def apply(_left: immutable.Seq[Any]) = {
@@ -102,9 +103,9 @@ trait PersistenceMatchers {
                     sortedNrs = nrs.sorted
                     if nrs != sortedNrs
                 } yield MatchResult(
-                        false,
-                        s"""Messages sequence with prefix ${prefixes(pos)} was not sorted! Was: $seq"""",
-                        s"""Messages sequence with prefix ${prefixes(pos)} was sorted! Was: $seq"""")
+                    false,
+                    s"""Messages sequence with prefix ${prefixes(pos)} was not sorted! Was: $seq"""",
+                    s"""Messages sequence with prefix ${prefixes(pos)} was sorted! Was: $seq"""")
 
             if (results.forall(_.matches)) MatchResult(true, "", "")
             else results.find(r ⇒ !r.matches).get

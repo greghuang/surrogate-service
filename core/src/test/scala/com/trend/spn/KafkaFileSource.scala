@@ -13,7 +13,6 @@ import akka.stream.scaladsl.{FileIO, Framing, Keep, Sink}
 import akka.stream.testkit.{StreamSpec, TestSubscriber}
 import akka.testkit.AkkaSpec
 import akka.util.ByteString
-import com.typesafe.config.Config
 import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -38,19 +37,6 @@ trait KafkaFileSource extends StreamSpec with BeforeAndAfterEachTestData {
     var partition = 0
     var groupID = ""
 
-//    override def atStartup(): Unit = {
-//        EmbeddedKafka.start()
-//        createFileProducer(sourcePath)
-//    }
-//
-//    override def beforeTermination(): Unit = {
-//        EmbeddedKafka.stop()
-//    }
-
-    protected def initialEmbeddedKafka(configMap: ConfigMap): Unit = {
-
-    }
-
     override protected def beforeEach(testData: TestData): Unit = {
         val props = AkkaSpec.mapToConfig(testData.configMap).getConfig("akka.kafka.consumer")
         val sourcePath = props.getString("sourcePath")
@@ -69,8 +55,6 @@ trait KafkaFileSource extends StreamSpec with BeforeAndAfterEachTestData {
     override def afterEach(testData: TestData): Unit = {
         EmbeddedKafka.stop()
     }
-
-    //override def afterTermination(): Unit = {}
 
     def createFileProducer(path: String, settings: ProducerSettings[Array[Byte], String]): Unit = {
         val producer = settings.createKafkaProducer()
