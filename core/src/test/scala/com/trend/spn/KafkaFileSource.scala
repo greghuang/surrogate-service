@@ -13,6 +13,7 @@ import akka.stream.scaladsl.{FileIO, Framing, Keep, Sink}
 import akka.stream.testkit.{StreamSpec, TestSubscriber}
 import akka.testkit.AkkaSpec
 import akka.util.ByteString
+import com.typesafe.config.Config
 import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -26,38 +27,33 @@ import scala.concurrent.duration._
 /**
  * Created by GregHuang on 1/13/17.
  */
-trait KafkaFileSource extends StreamSpec with BeforeAndAfterEachTestData {
-    this: Suite =>
+abstract class KafkaFileSource(props: Config) extends StreamSpec with BeforeAndAfterEach {
     implicit val mat = ActorMaterializer()(system)
     implicit val ec = system.dispatcher
     implicit val embeddedKafkaConfig = EmbeddedKafkaConfig(9092, 2181)
+
+    val consumerConf = props.getConfig("akka.kafka.consumer")
+    val topic = consumerConf.getString("topic")
+    val partition = 0
+    val groupID = "testgroup_0"
     val InitialMsg = "initial msg in topic, required to create the topic before any consumer subscribes to it"
-    var bootstrapServers = ""
-    var topic = ""
-    var partition = 0
-    var groupID = ""
+    val bootstrapServers = consumerConf.getString("kafka-clients.bootstrap.servers")
+    val sourcePath = consumerConf.getString("sourcePath")
 
-    override protected def beforeEach(testData: TestData): Unit = {
-        val props = AkkaSpec.mapToConfig(testData.configMap).getConfig("akka.kafka.consumer")
-        val sourcePath = props.getString("sourcePath")
-        val producerSettings =
-            ProducerSettings(system, new ByteArraySerializer, new StringSerializer).withBootstrapServers(bootstrapServers)
+    val producerSettings =
+        ProducerSettings(system, new ByteArraySerializer, new StringSerializer).withBootstrapServers(bootstrapServers)
 
-        bootstrapServers = props.getString("kafka-clients.bootstrap.servers")
-        topic = props.getString("topic")
-        partition = 0
-        groupID = "testgroup_0"
-
+    override protected def beforeEach(): Unit = {
         EmbeddedKafka.start()
-        createFileProducer(sourcePath, producerSettings)
+        createFileProducer(sourcePath)
     }
 
-    override def afterEach(testData: TestData): Unit = {
+    override def afterEach(): Unit = {
         EmbeddedKafka.stop()
     }
 
-    def createFileProducer(path: String, settings: ProducerSettings[Array[Byte], String]): Unit = {
-        val producer = settings.createKafkaProducer()
+    def createFileProducer(path: String): Unit = {
+        val producer = producerSettings.createKafkaProducer()
         producer.send(new ProducerRecord(topic, partition, null: Array[Byte], InitialMsg))
         producer.close(60, TimeUnit.SECONDS)
 
@@ -69,7 +65,7 @@ trait KafkaFileSource extends StreamSpec with BeforeAndAfterEachTestData {
                 map(n => {
             val record = new ProducerRecord(topic, 0, null:Array[Byte], n)
             Message(record, NotUsed)
-        }).viaMat(Producer.flow(settings))(Keep.right)
+        }).viaMat(Producer.flow(producerSettings))(Keep.right)
 
         val result: Future[Done] = source.runWith(Sink.ignore)
         Await.result(result, remainingOrDefault)

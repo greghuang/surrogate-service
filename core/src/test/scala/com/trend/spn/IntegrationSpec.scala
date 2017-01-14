@@ -40,7 +40,7 @@ object IntegrationSpec {
       """))
 }
 
-abstract class IntegrationSpec(props: Config) extends KafkaFileSource with Cleanup with PersistenceMatchers {
+abstract class IntegrationSpec(props: Config) extends KafkaFileSource(props) with Cleanup with PersistenceMatchers {
   //  def this() = this(
   //    ConfigFactory.parseString(IntegrationSpec.testConf).withFallback(ConfigFactory.load())
   //  )
@@ -66,9 +66,9 @@ abstract class IntegrationSpec(props: Config) extends KafkaFileSource with Clean
   def namedPersistentActor[T <: NamedPersistentActor : ClassTag] =
     system.actorOf(Props(implicitly[ClassTag[T]].runtimeClass, name))
 
-  override protected def beforeEach(testData: TestData): Unit = {
-    super.beforeEach(testData)
+  override protected def beforeEach(): Unit = {
     _name = s"${namePrefix}-${counter.incrementAndGet()}"
+    super.beforeEach()
   }
 }
 

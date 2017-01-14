@@ -30,7 +30,7 @@ object ADReactiveStreamSpec {
         """
 }
 
-class ADReactiveStreamSpec(props: Config) extends KafkaFileSource {
+class ADReactiveStreamSpec(props: Config) extends KafkaFileSource(props) {
     def this() = this(ConfigFactory.parseString(ADReactiveStreamSpec.config).withFallback(ConfigFactory.load()))
 
     class Aggregator extends Actor {
@@ -76,20 +76,20 @@ class ADReactiveStreamSpec(props: Config) extends KafkaFileSource {
             assert( isShutdown.isInstanceOf[Done] )
         }
 
-        "run the graph with AccountRouter actor" in {
-            implicit val timeout = Timeout(5.seconds)
-            val ref = TestActorRef(AccountRouter.props(props), "testRouter")
-            //val actRef = ref.underlyingActor
-            val adStream = ADReactiveStream(system, props)
-            val g = adStream.accountMatrixGraph(ref, topic, partition)
-            val (control, res, kill) = g.run()
-            Await.result(control.stop(), 1 second)
-
-            system.scheduler.scheduleOnce(5 seconds) {
-                println("Shutting down...")
-                kill.shutdown()
-            }
-        }
+//        "run the graph with AccountRouter actor" in {
+//            implicit val timeout = Timeout(5.seconds)
+//            val ref = TestActorRef(AccountRouter.props(props), "testRouter")
+//            //val actRef = ref.underlyingActor
+//            val adStream = ADReactiveStream(system, props)
+//            val g = adStream.accountMatrixGraph(ref, topic, partition)
+//            val (control, res, kill) = g.run()
+//            Await.result(control.stop(), 1 second)
+//
+//            system.scheduler.scheduleOnce(5 seconds) {
+//                println("Shutting down...")
+//                kill.shutdown()
+//            }
+//        }
     }
 
     "An ADReactiveStream" must {
