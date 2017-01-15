@@ -69,8 +69,9 @@ class ADReactiveStream(system: ActorSystem, props: Config) {
         val source = getKafkaConsumer(topic, partition)
         val flow = flowAccountMatrix(accountActor)
         val kill = KillSwitches.single[Int]
+        val sink = Sink.ignore
 
-        RunnableGraph.fromGraph(GraphDSL.create(source, flow, kill)((_, _, _)) { implicit builder => (source, flow, kill) =>
+        RunnableGraph.fromGraph(GraphDSL.create(source, flow, kill, sink)((_, _, _, _)) { implicit builder => (source, flow, kill, sink) =>
             import GraphDSL.Implicits._
             //Add an integer(1 ~ 3) as temporary key
             def aKey = Source.fromIterator(() => Iterator.from(1))
@@ -78,8 +79,8 @@ class ADReactiveStream(system: ActorSystem, props: Config) {
 
             aKey.map(_ % 3) ~> zip.in0
             source ~> zip.in1
-            zip.out ~> flow ~> kill ~> Sink.ignore
-            //source ~> flow ~> kill ~> Sink.ignore
+            zip.out ~> flow ~> kill ~> sink
+            //source ~> flow ~> kill ~> sink
             ClosedShape
         })
     }

@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.util.Timeout
+import com.trend.spn.router.{AccountRouter, Message}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{Await, Future}
@@ -23,7 +24,18 @@ object AccountSpec {
       """
 }
 class AccountSpec(config: Config) extends PersistenceSpec(PersistenceSpec.config("inmem", "AccountSpec")) with ImplicitSender {
-    def this() = this(ConfigFactory.parseString(AccountSpec.testConf).withFallback(ConfigFactory.load()))
+    def this() = this(ConfigFactory.parseString(AccountSpec.testConf).withFallback(ConfigFactory.empty()))
+
+    "An AccountRoutrer" must {
+        "initialize router successful" in {
+            implicit val timeout = Timeout(10.seconds)
+            val ref = system.actorOf(AccountRouter.props(config), "testRouter")
+            ref ! Message("0", "test")
+            val future = ref ? HostListQuery
+            val result = Await.result(future, Duration.Inf).asInstanceOf[String]
+            result should be("greghuang")
+        }
+    }
 
     "An account" must {
         "receive the event and update the last host" in {

@@ -23,11 +23,6 @@ object IntegrationSpec {
     extraConfig.map(ConfigFactory.parseString(_)).getOrElse(ConfigFactory.empty()).withFallback(
       ConfigFactory.parseString(
         s"""
-          akka.kafka.consumer {
-            kafka-clients.bootstrap.servers = "localhost:9092"
-            topic = test01
-            sourcePath = /ad_proc_100_test.txt
-          }
           akka.actor.serialize-creators = ${serialization}
           akka.actor.serialize-messages = ${serialization}
           akka.actor.warn-about-java-serializer-usage = off
@@ -40,15 +35,17 @@ object IntegrationSpec {
       """))
 }
 
-abstract class IntegrationSpec(props: Config) extends KafkaFileSource(props) with Cleanup with PersistenceMatchers {
+abstract class IntegrationSpec(props: Config) extends KafkaFileSource(props)
+  //with Cleanup with PersistenceMatchers
+  {
   //  def this() = this(
   //    ConfigFactory.parseString(IntegrationSpec.testConf).withFallback(ConfigFactory.load())
   //  )
 
   private var _name: String = _
-
-  lazy val extension = Persistence(system)
-  val counter = new AtomicInteger(0)
+//
+//  lazy val extension = Persistence(system)
+//  val counter = new AtomicInteger(0)
 
   /**
     * Unique name per test.
@@ -63,11 +60,11 @@ abstract class IntegrationSpec(props: Config) extends KafkaFileSource(props) wit
   /**
     * Creates a persistent actor with current name as constructor argument.
     */
-  def namedPersistentActor[T <: NamedPersistentActor : ClassTag] =
-    system.actorOf(Props(implicitly[ClassTag[T]].runtimeClass, name))
+//  def namedPersistentActor[T <: NamedPersistentActor : ClassTag] =
+//    system.actorOf(Props(implicitly[ClassTag[T]].runtimeClass, name))
 
   override protected def beforeEach(): Unit = {
-    _name = s"${namePrefix}-${counter.incrementAndGet()}"
+//    _name = s"${namePrefix}-${counter.incrementAndGet()}"
     super.beforeEach()
   }
 }
@@ -76,7 +73,7 @@ trait Cleanup { this: AkkaSpec ⇒
   val storageLocations = List(
     "akka.persistence.journal.leveldb.dir",
     "akka.persistence.journal.leveldb-shared.store.dir",
-    "akka.persistence.snapshot-store.local.dir").map(s ⇒ new File(system.settings.config.getString(s)))
+    "akka.persistence.snapshot-store.local.dir").map(s => new File(system.settings.config.getString(s)))
 
   override protected def atStartup(): Unit = {
     storageLocations.foreach(FileUtils.deleteDirectory)

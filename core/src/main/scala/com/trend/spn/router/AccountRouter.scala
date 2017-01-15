@@ -65,6 +65,10 @@ class AccountRouter(routerConfig: Config) extends Actor {
     override def receive: Receive = {
         case InitCommand => sender() ! AckCommand
         case CompleteCommand => println("Complete!!")
-        case msg: Message => router.route(msg, self)
+        case msg: Message => {
+            println("Receive a message")
+            sender() ! 1
+            //router.route(msg, self)
+        }
     }
 }

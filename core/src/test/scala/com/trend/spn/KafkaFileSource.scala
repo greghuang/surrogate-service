@@ -27,7 +27,7 @@ import scala.concurrent.duration._
 /**
  * Created by GregHuang on 1/13/17.
  */
-abstract class KafkaFileSource(props: Config) extends StreamSpec with BeforeAndAfterEach {
+abstract class KafkaFileSource(props: Config) extends StreamSpec(props) with BeforeAndAfterEach {
     implicit val mat = ActorMaterializer()(system)
     implicit val ec = system.dispatcher
     implicit val embeddedKafkaConfig = EmbeddedKafkaConfig(9092, 2181)
