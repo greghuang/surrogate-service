@@ -1,6 +1,7 @@
 package com.trend.spn
 
 import akka.actor.Actor
+import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.TestActorRef
 import akka.Done
@@ -27,24 +28,14 @@ object SurrogateIntegrationSpec {
     """
 }
 
-class SurrogateIntegrationSpec(config: Config) extends KafkaFileSource(config) {
+class SurrogateIntegrationSpec(config: Config) extends IntegrationSpec(config) {
   def this() = this(IntegrationSpec.config("inmem", "SurrogateTest", "on", Some(SurrogateIntegrationSpec.testConf)))
 
   "Surrogate service" must {
-    "consume the specified topic" in {
-      implicit val timeout = Timeout(5.seconds)
-      val adStream = ADReactiveStream(system, config)
-      val source: Source[String, Consumer.Control] = adStream.getKafkaConsumer(topic, partition)
-      val (control, probe) = source.toMat(TestSink.probe)(Keep.both).run
 
-      probe.request(100).expectNextN(100)
-      probe.cancel
-      Await.result(control.shutdown(), 5 seconds)
-    }
-
-//    "run the graph with specified AccountRouter actor" in {
+//    "run the built-in graph" in {
 //      implicit val timeout = Timeout(5.seconds)
-//      val router = system.actorOf(AccountRouter.props(config), "testRouter")
+//      val router = system.actorOf(AccountRouter.props(config), name)
 //      val adStream = ADReactiveStream(system, config)
 //      val g = adStream.accountMatrixGraph(router, topic, partition)
 //      val (control, temp, kill, result) = g.run()
@@ -55,5 +46,21 @@ class SurrogateIntegrationSpec(config: Config) extends KafkaFileSource(config) {
 //      }
 //      Await.result(result, 5 seconds)
 //    }
+
+    "run the graph with Test probe" in {
+      implicit val timeout = Timeout(5.seconds)
+      val router = system.actorOf(AccountRouter.props(config), name)
+      val adStream = ADReactiveStream(system, config)
+      val g = adStream.accountMatrixGraph[TestSubscriber.Probe[Int]](router, topic, partition, TestSink.probe[Int])
+      val (control, noused, kill, probe) = g.run()
+
+      system.scheduler.scheduleOnce(5 seconds) {
+        println("Shutting down...")
+        kill.shutdown()
+      }
+
+      probe.request(100).expectNextN(100)
+      probe.cancel
+    }
   }
 }

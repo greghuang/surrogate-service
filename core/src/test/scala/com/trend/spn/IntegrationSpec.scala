@@ -23,8 +23,6 @@ object IntegrationSpec {
     extraConfig.map(ConfigFactory.parseString(_)).getOrElse(ConfigFactory.empty()).withFallback(
       ConfigFactory.parseString(
         s"""
-          akka.actor.serialize-creators = ${serialization}
-          akka.actor.serialize-messages = ${serialization}
           akka.actor.warn-about-java-serializer-usage = off
           akka.persistence.publish-plugin-commands = on
           akka.persistence.journal.plugin = "akka.persistence.journal.${plugin}"
@@ -36,16 +34,12 @@ object IntegrationSpec {
 }
 
 abstract class IntegrationSpec(props: Config) extends KafkaFileSource(props)
-  //with Cleanup with PersistenceMatchers
-  {
-  //  def this() = this(
-  //    ConfigFactory.parseString(IntegrationSpec.testConf).withFallback(ConfigFactory.load())
-  //  )
+    with Cleanup with PersistenceMatchers {
 
   private var _name: String = _
-//
-//  lazy val extension = Persistence(system)
-//  val counter = new AtomicInteger(0)
+
+  lazy val extension = Persistence(system)
+  val counter = new AtomicInteger(0)
 
   /**
     * Unique name per test.
@@ -60,11 +54,11 @@ abstract class IntegrationSpec(props: Config) extends KafkaFileSource(props)
   /**
     * Creates a persistent actor with current name as constructor argument.
     */
-//  def namedPersistentActor[T <: NamedPersistentActor : ClassTag] =
-//    system.actorOf(Props(implicitly[ClassTag[T]].runtimeClass, name))
+  def namedPersistentActor[T <: NamedPersistentActor : ClassTag] =
+    system.actorOf(Props(implicitly[ClassTag[T]].runtimeClass, name))
 
   override protected def beforeEach(): Unit = {
-//    _name = s"${namePrefix}-${counter.incrementAndGet()}"
+    _name = s"${namePrefix}-${counter.incrementAndGet()}"
     super.beforeEach()
   }
 }

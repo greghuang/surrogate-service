@@ -74,7 +74,8 @@ class ADReactiveStreamSpec(props: Config) extends KafkaFileSource(props) {
         "shutdown the consumer gracefully" in {
             implicit val timeout = Timeout(5 seconds)
             val adStream = ADReactiveStream(system, props)
-            val g: RunnableGraph[(Consumer.Control, TestSubscriber.Probe[String])] = adStream.getKafkaConsumer(topic, partition).toMat(TestSink.probe)(Keep.both)
+            val g: RunnableGraph[(Consumer.Control, TestSubscriber.Probe[String])] =
+                adStream.getKafkaConsumer(topic, partition).toMat(TestSink.probe)(Keep.both)
             val (control, probe) = g.run()
             probe.request(100).expectNextN(100)
             Await.result(control.shutdown(), 5 seconds)

@@ -66,10 +66,14 @@ class ADReactiveStream(system: ActorSystem, props: Config) {
     }
 
     def accountMatrixGraph(accountActor: ActorRef, topic: String, partition: Int)(implicit timeout: Timeout) = {
+        accountMatrixGraph[Future[Done]](accountActor, topic, partition, Sink.ignore)
+    }
+
+    def accountMatrixGraph[T](accountActor: ActorRef, topic: String, partition: Int, sink: Sink[Int, T])(implicit timeout: Timeout) = {
         val source = getKafkaConsumer(topic, partition)
         val flow = flowAccountMatrix(accountActor)
         val kill = KillSwitches.single[Int]
-        val sink = Sink.ignore
+//        val sink = Sink.ignore
 
         RunnableGraph.fromGraph(GraphDSL.create(source, flow, kill, sink)((_, _, _, _)) { implicit builder => (source, flow, kill, sink) =>
             import GraphDSL.Implicits._
@@ -77,7 +81,7 @@ class ADReactiveStream(system: ActorSystem, props: Config) {
             def aKey = Source.fromIterator(() => Iterator.from(1))
             val zip = builder.add(Zip[Int, String]())
 
-            aKey.map(_ % 3) ~> zip.in0
+            aKey.map(_ % 10) ~> zip.in0
             source ~> zip.in1
             zip.out ~> flow ~> kill ~> sink
             //source ~> flow ~> kill ~> sink

@@ -1,5 +1,7 @@
 package com.trend.spn.router
 
+import java.util.concurrent.atomic.AtomicLong
+
 import akka.actor.{ActorRef, Actor, Props}
 import akka.routing.ConsistentHashingRouter.{ConsistentHashMapping, ConsistentHashable}
 import akka.routing.{ConsistentHashingRoutingLogic, ConsistentHashingPool, ActorRefRoutee, Router}
@@ -27,29 +29,36 @@ object AccountRouter {
 }
 
 class AccountRouter(routerConfig: Config) extends Actor {
+    val name = self.path.name
     var partition = 1
     var router: Router = _
-    var routerPool: ActorRef = context.system.actorOf(
-            ConsistentHashingPool(10).props(Account.props(routerConfig)),
-            name = "account-router")
+    val counter = new AtomicLong(0)
 
-//    def addRoutee(accountName: String): ActorRefRoutee = {
-//        val r = context.actorOf(Account.props(accountName))
-//        context watch r
-//        ActorRefRoutee(r)
-//    }
+//    var routerPool: ActorRef = context.system.actorOf(
+//            ConsistentHashingPool(10).props(Account.props(routerConfig)),
+//            name = s"${name}_Pool")
+
+    def addRoutee(): ActorRefRoutee = {
+        val name = s"Account-${counter.incrementAndGet()}"
+        val r = context.actorOf(Account.props(routerConfig), name)
+        context watch r
+        ActorRefRoutee(r)
+    }
 
     def createRouter: Router = {
-        val routees = Vector.empty
-        Router(ConsistentHashingRoutingLogic(context.system), routees)
+        val routees = Vector.fill(3) {
+            addRoutee()
+        }
+        // Set virtualNodesFactor = 1 in order to no partition
+        Router(ConsistentHashingRoutingLogic(context.system, 10), routees)
     }
 
     override def postStop(): Unit = {
-        println("The AccountRouter is in the end")
+        println(s"${name} is in the end")
     }
 
     override def preStart(): Unit = {
-        println("A company is established")
+        println(s"${name} is established")
         router = createRouter
     }
 
@@ -66,9 +75,9 @@ class AccountRouter(routerConfig: Config) extends Actor {
         case InitCommand => sender() ! AckCommand
         case CompleteCommand => println("Complete!!")
         case msg: Message => {
-            println("Receive a message")
+            //println("Receive a message:" + key)
             sender() ! 1
-            //router.route(msg, self)
+            router.route(msg, self)
         }
     }
 }
